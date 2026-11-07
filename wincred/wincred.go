@@ -5,7 +5,6 @@ package wincred
 import (
 	"bytes"
 	"net/url"
-	"strconv"
 	"strings"
 
 	winc "github.com/danieljoos/wincred"
@@ -18,26 +17,16 @@ type Wincred struct{}
 
 // Add adds new credentials to the windows credentials manager.
 func (h Wincred) Add(creds *credentials.Credentials) error {
-	blob, chunks, err := splitSecret([]byte(creds.Secret))
-	if err != nil {
-		return err
-	}
-
+	// SABOTAGE RUN: pre-fix behaviour, which puts the entire secret in
+	// CredentialBlob and never uses attribute chunks.
 	g := winc.NewGenericCredential(creds.ServerURL)
 	g.UserName = creds.Username
-	g.CredentialBlob = blob
+	g.CredentialBlob = []byte(creds.Secret)
 	g.Persist = winc.PersistLocalMachine
 	g.Attributes = append(g.Attributes, winc.CredentialAttribute{
 		Keyword: "label",
 		Value:   []byte(credentials.CredsLabel),
 	})
-	for index, chunk := range chunks {
-		g.Attributes = append(g.Attributes, winc.CredentialAttribute{
-			Keyword: secretChunkAttributePrefix + strconv.Itoa(index),
-			Value:   chunk,
-		})
-	}
-
 	return g.Write()
 }
 
